@@ -1,5 +1,5 @@
-#This is an duty allocation optimization model for the KKH DPM CC Team, built by Suraj Kamath, kamath.s.suraj@gmail.com
-#its objective is to assign duties as fairly as possible across Clinical Counsellors while fulfilling the operational requirements of the team
+#This is an duty allocation optimization model for a medical team, built by Suraj Kamath, kamath.s.suraj@gmail.com
+#its objective is to assign duties as fairly as possible across medical professionals while fulfilling the operational requirements of the team
 
 import os
 import pandas as pd
@@ -12,7 +12,7 @@ import tkinter as tk
 TOTAL_PERIODS_NUM = 10
 TOTAL_DUTIES_NUM = 4
 #Periods are defined as Mon AM, Mon PM, Tue AM ... Fri PM
-#Duties currently are Child CC inpatient, Child CC BL/outpatient, Women CC inpatient 
+
 
 
 
@@ -29,7 +29,7 @@ def model_problem(week_to_optimize):
     day_oncall_samecc_weight=int(sheet.range(14,39).value)
     seconds_to_optimize=int(sheet.range(15,39).value)
     
-    #row offsets to apply for each week. this wont change unless number of duties change of number of ccs exceeds 15
+    #row offsets to apply for each week. this wont change unless number of duties change of number of employees exceeds 15
     ass_offset=(week_to_optimize-1)*11
     avl_offset=(week_to_optimize-1)*18
     total_num_counselors=len([x for x in sheet.range((91,2),(105,2)).value if x is not None]) #gets #of counsellors 
@@ -40,7 +40,7 @@ def model_problem(week_to_optimize):
     for period in range(TOTAL_PERIODS_NUM):
         sheet.range((ass_offset+8,4+period*2),(ass_offset+8+TOTAL_DUTIES_NUM,4+period*2)).options(transpose=True).value=""
 
-    #below code reads each row of CC Availability from below the roster sheet
+    #below code reads each row of emp Availability from below the roster sheet
     workerdf = pd.DataFrame(data=sheet.range((avl_offset+91,1),(avl_offset+101,23)).value)
     
     #below code grabs clinic assignment data
@@ -60,7 +60,7 @@ def model_problem(week_to_optimize):
         workers_data[name]["change_assign"]=[]
        
         
-        #this code checks if any clinic has been assigned for the week for each CC and puts those assignment in a list called clinic_assign
+        #this code checks if any clinic has been assigned for the week for each employee and puts those assignment in a list called clinic_assign
         for period in range(TOTAL_PERIODS_NUM):            
             clinic=0
             for c_row in range(3):
@@ -119,13 +119,13 @@ def model_problem(week_to_optimize):
             periodid += 1
         workerid += 1
         
-        #create tvars to assign penalty for unfair allocation of duties across cc
+        #create tvars to assign penalty for unfair allocation of duties across emp
         dutyid=0
         for dutyid in range(TOTAL_DUTIES_NUM):
             dutystr=str(dutyid)
             tvars.append(pulp.LpVariable("t_{}_{}".format(workerstr,dutystr), cat=pulp.LpInteger))
         
-        #create cvars to assign penalty for duty0,1,2 allocations across diff ccs for 2 periods in same days
+        #create cvars to assign penalty for duty0,1,2 allocations across diff employees for 2 periods in same days
         periodid=0
         for period in range(0,TOTAL_PERIODS_NUM,2):
             periodstr=str(period)
@@ -159,7 +159,7 @@ def model_problem(week_to_optimize):
     if not chvars== None: objective_function += 3*chvars
     problem += objective_function
     
-    #creates a constraint for each CC and period  CC can only be assigned 1 duty
+    #creates a constraint for each employee and period employee can only be assigned 1 duty
     if allow_scr_cc_repeat==0:
         for period in range(TOTAL_PERIODS_NUM):
 
@@ -177,21 +177,21 @@ def model_problem(week_to_optimize):
                     work_period_duty_sum += workers_data[worker]["assigned_period_duty"][period*TOTAL_DUTIES_NUM+duty] 
                 problem += work_period_duty_sum  <= 1
 
-    #creates a constraint for each CC cannot have more than 6 duties
+    #creates a constraint for each employee cannot have more than 6 duties
     for worker in workers_data.keys():
         work_period_duty_sum=None
         for x in range(TOTAL_PERIODS_NUM*TOTAL_DUTIES_NUM):
                 work_period_duty_sum += workers_data[worker]["assigned_period_duty"][x] 
         problem += work_period_duty_sum  <= max_weekly_duties
 
-    #creates a constraint for each CC cannot have more than 4 child on calls
+    #creates a constraint for each employee cannot have more than 4 child on calls
     for worker in workers_data.keys():
         work_period_duty_sum=None
         for period in range(TOTAL_PERIODS_NUM):
                 work_period_duty_sum += workers_data[worker]["assigned_period_duty"][0+period*TOTAL_DUTIES_NUM] + workers_data[worker]["assigned_period_duty"][1+period*TOTAL_DUTIES_NUM] 
         problem += work_period_duty_sum  <= max_weekly_child_oncalls
 
-    #creates a constraint for each CC cannot have more than 5 child+women on calls
+    #creates a constraint for each employee cannot have more than 5 child+women on calls
     for worker in workers_data.keys():
         work_period_duty_sum=None
         for period in range(TOTAL_PERIODS_NUM):
@@ -209,7 +209,7 @@ def model_problem(week_to_optimize):
             problem += work_period_duty_sum  == 1
             
    
-    #a cc cannot be assigned a child CC or BL "(duty0 and duty1)" on the day they are assigned clinic
+    #a employee cannot be assigned a duty0 and duty1 on the day they are assigned clinic
     if clinic_constraint==0:
         workerid=0
         for worker in workers_data.keys():
@@ -224,7 +224,7 @@ def model_problem(week_to_optimize):
                 if  workers_data[worker]["clinic_assign"][period]==1: problem += work_period_duty_sum <= 0
 
 
-    #Constraint to impose penalty if on a single day duty0,1,2 both periods are not assigned to the same CC
+    #Constraint to impose penalty if on a single day duty0,1,2 both periods are not assigned to the same employee
     workerid=0
     for worker in workers_data.keys():
         work_duty_sum=None
@@ -307,7 +307,7 @@ def model_problem(week_to_optimize):
 if __name__ == "__main__":
     
     tk.Tk().withdraw() # we don't want a full GUI, so keep the root window from appearing
-    filename = tk.filedialog.askopenfilename(initialdir=os.getcwd(), title="Select CC Roster file",
+    filename = tk.filedialog.askopenfilename(initialdir=os.getcwd(), title="Select Roster file",
                                            filetypes=[("Excel Files", "*.xlsx")]) # show an "Open" dialog box and return the path to the selected file
     print(filename)
       
@@ -316,7 +316,7 @@ if __name__ == "__main__":
         sheet = wb.sheets['Optimize']
         week_to_optimize=sheet.range(5,39).value
     except:
-        print("Check error: Do you select a CC Roster file, with a sheet named 'Optimize' (O in caps) with a settings table in col AL, in the same folder as this program?")
+        print("Check error: Do you select a  Roster file, with a sheet named 'Optimize' (O in caps) with a settings table in col AL, in the same folder as this program?")
         exit()
     
     if week_to_optimize=="All":
